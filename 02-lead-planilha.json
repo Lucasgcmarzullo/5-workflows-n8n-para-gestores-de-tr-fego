@@ -1,0 +1,98 @@
+{
+  "name": "02 - Lead -> Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "resolveData": true
+        }
+      },
+      "id": "96ba3c38-f03c-45b8-bb8c-c6898c8d2375",
+      "name": "Novo Lead (Facebook)",
+      "type": "n8n-nodes-base.facebookLeadAdsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "24be0b48-d261-4409-bec9-aaa8fd899724"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i => {\n  const d = i.json;\n  const nomeCompleto = d.full_name || d.nome || d.name || 'tudo bem';\n  let tel = String(d.phone_number || d.telefone || d.phone || '').replace(/\\D/g, '');\n  if (tel && !tel.startsWith('55')) tel = '55' + tel;\n  return { json: { nome: nomeCompleto.split(' ')[0], nomeCompleto, telefone: tel, email: d.email || '' } };\n});"
+      },
+      "id": "a9645e95-701d-4816-9070-e5a9c3cc3bd5",
+      "name": "Normalizar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "TROQUE_AQUI_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data": "={{ $now.toFormat('dd/MM/yyyy HH:mm') }}",
+            "Nome": "={{ $json.nomeCompleto }}",
+            "Telefone": "={{ $json.telefone }}",
+            "Email": "={{ $json.email }}",
+            "Status": "Novo"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "f8325051-df48-402a-bf6f-4659e69085a2",
+      "name": "Salvar na Planilha",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Novo Lead (Facebook)": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Lead": {
+      "main": [
+        [
+          {
+            "node": "Salvar na Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

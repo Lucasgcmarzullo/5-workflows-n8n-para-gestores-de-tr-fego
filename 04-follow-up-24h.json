@@ -1,0 +1,203 @@
+{
+  "name": "04 - Follow-up automatico 24h",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "resolveData": true
+        }
+      },
+      "id": "355aae86-5e22-4c29-99f9-8ef577cb0c7e",
+      "name": "Novo Lead (Facebook)",
+      "type": "n8n-nodes-base.facebookLeadAdsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "87e1f63b-4125-44d5-9a5c-e29124664c1f"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i => {\n  const d = i.json;\n  const nomeCompleto = d.full_name || d.nome || d.name || 'tudo bem';\n  let tel = String(d.phone_number || d.telefone || d.phone || '').replace(/\\D/g, '');\n  if (tel && !tel.startsWith('55')) tel = '55' + tel;\n  return { json: { nome: nomeCompleto.split(' ')[0], nomeCompleto, telefone: tel, email: d.email || '' } };\n});"
+      },
+      "id": "d07b38cb-bce1-4c32-80ae-f49bdd2152c6",
+      "name": "Normalizar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 24,
+        "unit": "hours"
+      },
+      "id": "99437192-86cd-4bbb-9dbb-c9d8e11252e6",
+      "name": "Esperar 24h",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        520,
+        300
+      ],
+      "webhookId": "2931cae0-795e-4d11-b665-ad85b3d895db"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "TROQUE_AQUI_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telefone",
+              "lookupValue": "={{ $('Normalizar Lead').item.json.telefone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "528fc93a-3593-49f3-be0a-d49d2bbc8140",
+      "name": "Buscar Status do Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        780,
+        300
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b8a86116-ee55-464d-afe4-02c5ed2fbc06",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "Respondeu",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4dc54c08-8d43-4ef2-ae37-f0e59f92d011",
+      "name": "Ainda não respondeu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://TROQUE_AQUI_URL_DA_SUA_API/message/sendText/TROQUE_AQUI_NOME_DA_INSTANCIA",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "TROQUE_AQUI_SUA_APIKEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Normalizar Lead').item.json.telefone, text: `Oi ${$('Normalizar Lead').item.json.nome}, tudo bem? Vi que você pediu informações e a gente ainda não conseguiu conversar. Posso te ajudar por aqui?` }) }}",
+        "options": {}
+      },
+      "id": "069d66d2-54cc-42bd-9554-083f008cb257",
+      "name": "Enviar Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Novo Lead (Facebook)": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Lead": {
+      "main": [
+        [
+          {
+            "node": "Esperar 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esperar 24h": {
+      "main": [
+        [
+          {
+            "node": "Buscar Status do Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Status do Lead": {
+      "main": [
+        [
+          {
+            "node": "Ainda não respondeu?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ainda não respondeu?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

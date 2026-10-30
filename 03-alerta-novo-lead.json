@@ -1,0 +1,77 @@
+{
+  "name": "03 - Alerta de novo lead (Telegram)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "resolveData": true
+        }
+      },
+      "id": "9054d4a7-8263-4dfd-9251-cac98b2a8307",
+      "name": "Novo Lead (Facebook)",
+      "type": "n8n-nodes-base.facebookLeadAdsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "40c0253c-0992-4776-8fc1-f632ea6108ee"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i => {\n  const d = i.json;\n  const nomeCompleto = d.full_name || d.nome || d.name || 'tudo bem';\n  let tel = String(d.phone_number || d.telefone || d.phone || '').replace(/\\D/g, '');\n  if (tel && !tel.startsWith('55')) tel = '55' + tel;\n  return { json: { nome: nomeCompleto.split(' ')[0], nomeCompleto, telefone: tel, email: d.email || '' } };\n});"
+      },
+      "id": "e17db771-fcba-4139-892c-234111b7cc4b",
+      "name": "Normalizar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "TROQUE_AQUI_CHAT_ID",
+        "text": "=🔔 Novo lead!\n\n👤 {{ $json.nomeCompleto }}\n📱 {{ $json.telefone }}\n✉️ {{ $json.email }}",
+        "additionalFields": {}
+      },
+      "id": "bd590726-3547-4461-8c1d-ac0894fd6b04",
+      "name": "Avisar no Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        520,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Novo Lead (Facebook)": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Lead": {
+      "main": [
+        [
+          {
+            "node": "Avisar no Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

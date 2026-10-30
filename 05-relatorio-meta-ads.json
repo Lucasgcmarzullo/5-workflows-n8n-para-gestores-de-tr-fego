@@ -1,0 +1,136 @@
+{
+  "name": "05 - Relatorio diario Meta Ads",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "f86c4674-6e2c-4746-8781-52c344e655b3",
+      "name": "Todo dia 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://graph.facebook.com/v20.0/act_TROQUE_AQUI_ID_DA_CONTA/insights",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "spend,impressions,clicks,actions"
+            },
+            {
+              "name": "date_preset",
+              "value": "yesterday"
+            },
+            {
+              "name": "access_token",
+              "value": "TROQUE_AQUI_TOKEN_DO_META"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3405a05f-39e5-42a1-9888-9b7009765091",
+      "name": "Buscar Dados Meta Ads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json.data && $input.first().json.data[0];\nif (!d) return [{ json: { texto: '📊 Sem dados de investimento ontem.' } }];\nconst gasto = parseFloat(d.spend || 0);\nconst tipos = ['lead', 'onsite_conversion.lead_grouped', 'onsite_conversion.messaging_conversation_started_7d'];\nconst act = (d.actions || []).find(a => tipos.includes(a.action_type));\nconst leads = act ? parseInt(act.value) : 0;\nconst brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\nconst texto = `📊 Relatório de ontem\\n\\n💰 Investido: ${brl(gasto)}\\n👁️ Impressões: ${d.impressions}\\n🖱️ Cliques: ${d.clicks}\\n🎯 Leads: ${leads}\\n📉 CPL: ${leads ? brl(gasto / leads) : '-'}`;\nreturn [{ json: { texto } }];"
+      },
+      "id": "8495960b-2964-4be1-8395-349df0d422e8",
+      "name": "Montar Relatório",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://TROQUE_AQUI_URL_DA_SUA_API/message/sendText/TROQUE_AQUI_NOME_DA_INSTANCIA",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "TROQUE_AQUI_SUA_APIKEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: '55TROQUE_AQUI_NUMERO_DO_CLIENTE', text: $json.texto }) }}",
+        "options": {}
+      },
+      "id": "f791cc64-8dcc-462a-b8a2-9083781fc650",
+      "name": "Enviar Relatório",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Todo dia 8h": {
+      "main": [
+        [
+          {
+            "node": "Buscar Dados Meta Ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Dados Meta Ads": {
+      "main": [
+        [
+          {
+            "node": "Montar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Relatório": {
+      "main": [
+        [
+          {
+            "node": "Enviar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

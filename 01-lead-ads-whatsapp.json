@@ -1,0 +1,89 @@
+{
+  "name": "01 - Lead Ads -> WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "resolveData": true
+        }
+      },
+      "id": "b8565178-3415-4ca7-8978-2380ac844589",
+      "name": "Novo Lead (Facebook)",
+      "type": "n8n-nodes-base.facebookLeadAdsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "5da7871d-6dc3-4a28-9e91-d27656714291"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i => {\n  const d = i.json;\n  const nomeCompleto = d.full_name || d.nome || d.name || 'tudo bem';\n  let tel = String(d.phone_number || d.telefone || d.phone || '').replace(/\\D/g, '');\n  if (tel && !tel.startsWith('55')) tel = '55' + tel;\n  return { json: { nome: nomeCompleto.split(' ')[0], nomeCompleto, telefone: tel, email: d.email || '' } };\n});"
+      },
+      "id": "393fd325-f808-4365-b4eb-59f42b8c9bc2",
+      "name": "Normalizar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://TROQUE_AQUI_URL_DA_SUA_API/message/sendText/TROQUE_AQUI_NOME_DA_INSTANCIA",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "TROQUE_AQUI_SUA_APIKEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.telefone, text: `Olá ${$json.nome}! 👋 Recebi seu contato agora. Posso te ajudar por aqui?` }) }}",
+        "options": {}
+      },
+      "id": "07845a79-cab9-4377-b517-afc457ac3407",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Novo Lead (Facebook)": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Lead": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
